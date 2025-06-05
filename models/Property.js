@@ -1,28 +1,29 @@
 const mongoose = require("mongoose");
+
 const propertySchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: String,
-  type: { type: String, enum: ["apartment", "villa", "plot", "commercial", "other"], required: true },
-
+  category: String, // eg. Residential, Commercial
+  type: String,     // eg. Buy, Rent
+  area: { type: mongoose.Schema.Types.ObjectId, ref: "Area" },
   highlights: {
     locality: String,
+    subLocality: String,
     bedrooms: Number,
     bathrooms: Number,
-    areaSize: Number, // in sq ft
-    facing: String,
-    furnishing: String,
-    floor: String,
-    amenities: [String],
+    area: String, // e.g. "1200 sqft"
+    otherFeatures: [String] // e.g. ["Swimming Pool", "Garden"]
   },
-
-  area: { type: mongoose.Schema.Types.ObjectId, ref: "Area", required: true },
   price: {
-    value: { type: Number, required: true },
-    currency: { type: String, default: "INR" },
+    amount: Number,
+    currency: { type: String, default: "INR" }
   },
-
-  images: [String], // URLs of property images
-  postedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-}, { timestamps: true });
+  images: [String],
+  postedAt: { type: Date, default: Date.now },
+  postedBy: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User"  // This should match your User model name
+}
+});
 
 module.exports = mongoose.model("Property", propertySchema);
