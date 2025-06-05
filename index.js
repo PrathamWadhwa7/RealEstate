@@ -8,6 +8,7 @@ const cors = require("cors");
 const authRoutes = require("./routes/auth");
 const propertyRoutes = require("./routes/properties");
 const leadRoutes = require("./routes/leads");
+const blogRoutes = require("./Routes/blog");
 
 dotenv.config();
 const app = express();
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/leads", leadRoutes);
+app.use("/api/blogs", blogRoutes);
 
 // Connect to MongoDB and start server
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
