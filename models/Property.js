@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-
 const propertySchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: String,
