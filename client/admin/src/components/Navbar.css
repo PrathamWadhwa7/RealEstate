@@ -1,14 +1,18 @@
-/* Navbar.css */
 .navbar {
-  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 1200 !important; /* Increased z-index to ensure it stays on top */
+  box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1200;
   background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
-  transition: all 0.3s ease;
+  transition: all 0.3s ease-in-out;
   width: 100%;
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
+}
+
+.navbar.scrolled {
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
 }
 
 .navbar-toolbar {
@@ -22,47 +26,67 @@
   box-sizing: border-box;
 }
 
-.navbar-title {
+/* Left side styles */
+.navbar-left {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 12px;
-  flex-grow: 1;
   transition: transform 0.2s ease;
 }
 
-.navbar-title:hover {
+.navbar-left:hover {
   transform: scale(1.02);
 }
 
-.navbar-logo {
-  width: 40px !important;
-  height: 40px !important;
-  cursor: pointer;
-  background-color: white !important;
-  border-radius: 50%;
-  padding: 8px !important;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.navbar-logo:hover {
-  transform: rotate(360deg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-.navbar-text {
-  font-weight: 700 !important;
-  color: white !important;
-  font-size: 1.4rem !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  letter-spacing: 0.5px;
-}
-
-.navbar-links {
+/* Center links styles */
+.navbar-center-links {
   display: flex;
   gap: 8px;
   align-items: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Right side styles */
+.navbar-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.logo-container {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.navbar-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.drawer-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.navbar-text {
+  font-weight: 700;
+  color: white;
+  font-size: 1.4rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.5px;
 }
 
 .nav-link-button {
@@ -112,35 +136,20 @@
 }
 
 .admin-panel-text {
-  color: rgba(255, 255, 255, 0.9) !important;
-  font-weight: 500 !important;
-  font-size: 1.1rem !important;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  font-size: 1.1rem;
 }
 
 .navbar-drawer-container {
-  z-index: 1450 !important;
-}
-
-.navbar-drawer-container .MuiDrawer-paper {
-  width: 280px;
-  background: whitesmoke;
-  height: 100vh;
-  position: fixed;
-  top: 0;
-  left: 0;
-  transform: translateX(-100%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
-}
-
-.navbar-drawer-container .MuiDrawer-paper.MuiDrawer-paperAnchorLeft {
-  transform: translateX(0);
+  z-index: 1450;
 }
 
 .navbar-drawer {
   width: 100%;
   height: 100%;
   overflow-y: auto;
+  background: #f5f5f5;
 }
 
 .drawer-header {
@@ -153,56 +162,46 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.drawer-logo {
-  width: 32px;
-  height: 32px;
-  background-color: white;
-  border-radius: 50%;
-  padding: 6px;
-}
-
 .drawer-title {
-  font-weight: 600 !important;
-  font-size: 1.1rem !important;
+  font-weight: 600;
+  font-size: 1.1rem;
 }
 
 .drawer-list-item {
   margin: 4px 12px;
-  border-radius: 12px !important;
-  transition: all 0.3s ease !important;
-  color: #333 !important;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  color: #333;
 }
 
 .drawer-list-item:hover {
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
 }
 
 .drawer-icon {
-  color: #1976d2 !important;
-  min-width: 40px !important;
+  color: #1976d2;
+  min-width: 40px;
 }
 
 .drawer-list-item .MuiListItemText-primary {
-  font-weight: 500 !important;
-  color: #333 !important;
+  font-weight: 500;
+  color: #333;
 }
 
 .navbar-menu-icon {
-  margin-right: 12px;
   transition: transform 0.3s ease;
 }
 
 .navbar-menu-icon:hover {
-  transform: rotate(180deg);
+  transform: rotate(90deg);
 }
 
 .auth-icons {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: 8px;
 }
 
 .auth-icons .MuiIconButton-root {
@@ -217,52 +216,47 @@
 }
 
 .logout-button {
-  transition: all 0.3s ease !important;
-  border-radius: 50% !important;
+  transition: all 0.3s ease;
+  border-radius: 50%;
 }
 
 .logout-button:hover {
-  background: rgba(244, 67, 54, 0.1) !important;
-  color: #ff5252 !important;
+  background: rgba(244, 67, 54, 0.1);
+  color: #ff5252;
   transform: scale(1.1);
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .navbar-toolbar {
     padding: 0 12px;
   }
   
   .navbar-text {
-    font-size: 1.1rem !important;
+    font-size: 1.2rem;
   }
   
-  .navbar-logo {
-    width: 32px !important;
-    height: 32px !important;
+  .logo-container {
+    width: 36px;
+    height: 36px;
   }
   
-  .navbar-drawer-container .MuiDrawer-paper {
-    width: 280px;
+  .navbar-center-links {
+    display: none;
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .navbar-toolbar {
     padding: 0 8px;
   }
   
   .navbar-text {
-    font-size: 1rem !important;
+    font-size: 1.1rem;
   }
   
-  .navbar-logo {
-    width: 28px !important;
-    height: 28px !important;
-  }
-  
-  .navbar-drawer-container .MuiDrawer-paper {
-    width: 260px;
+  .logo-container {
+    width: 32px;
+    height: 32px;
   }
   
   .auth-icons {
@@ -270,24 +264,41 @@
   }
 }
 
-/* Prevent horizontal scroll */
-html, body {
-  overflow-x: hidden;
-  max-width: 100vw;
+@media (max-width: 400px) {
+  .navbar-text {
+    font-size: 1rem;
+  }
+  
+  .logo-container {
+    width: 28px;
+    height: 28px;
+  }
 }
 
-/* Ensure content below navbar has proper spacing */
-body {
-  padding-top: 64px !important;
-}
-
-/* Animation for drawer */
 .MuiDrawer-root .MuiBackdrop-root {
   background-color: rgba(0, 0, 0, 0.5) !important;
   z-index: 1400 !important;
 }
+/* Remove black border/outline on click/focus */
+.nav-link-button:focus,
+.nav-link-button:active,
+.nav-link-button:focus-visible {
+  outline: 2px solid white !important;
+  outline-offset: 2px;
+}
 
-/* Drawer backdrop */
-.navbar-drawer-container .MuiModal-backdrop {
-  background-color: rgba(0, 0, 0, 0.5);
+/* For IconButtons (like menu, login, logout icons) */
+.MuiIconButton-root:focus,
+.MuiIconButton-root:active,
+.MuiIconButton-root:focus-visible {
+  outline: 2px solid white !important;
+  outline-offset: 2px;
+}
+
+/* For ListItems in the drawer */
+.MuiListItem-button:focus,
+.MuiListItem-button:active,
+.MuiListItem-button:focus-visible {
+  outline: 2px solid white !important;
+  outline-offset: -2px;
 }
