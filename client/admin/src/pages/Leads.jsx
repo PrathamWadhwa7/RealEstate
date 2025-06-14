@@ -45,6 +45,7 @@ import {
   Message as MessageIcon,
   LocationOn as LocationIcon,
   Apartment as ApartmentIcon,
+  Info as InfoIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
 import axiosInstance from '../api/axiosInstance';
@@ -71,7 +72,6 @@ const LeadsAdminPanel = () => {
   });
   const [properties, setProperties] = useState([]);
   const [areas, setAreas] = useState([]);
-  const [isCreatingLead, setIsCreatingLead] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -125,20 +125,10 @@ const LeadsAdminPanel = () => {
   };
 
   const createLead = async () => {
-    setIsCreatingLead(true);
     try {
-      // Create the lead
-      const createResponse = await axiosInstance.post('/leads', newLead);
-      
-      // Fetch the populated lead immediately
-      const { data: populatedLead } = await axiosInstance.get(`/leads/${createResponse.data._id}`, {
-        params: { populate: 'property,Area' }
-      });
-
-      // Update state with populated data
-      setLeads(prev => [populatedLead, ...prev]);
-      setFilteredLeads(prev => [populatedLead, ...prev]);
-      
+      const response = await axiosInstance.post('/leads', newLead);
+      setLeads(prev => [...prev, response.data]);
+      setFilteredLeads(prev => [...prev, response.data]);
       showSnackbar('Lead created successfully!', 'success');
       setAddDialogOpen(false);
       setNewLead({
@@ -152,8 +142,6 @@ const LeadsAdminPanel = () => {
       });
     } catch (error) {
       handleApiError(error, 'creating lead');
-    } finally {
-      setIsCreatingLead(false);
     }
   };
 
@@ -212,7 +200,7 @@ const LeadsAdminPanel = () => {
     if (typeof obj[property] === 'object') {
       if (property === 'property') return obj[property]?.title || 'N/A';
       if (property === 'Area') return obj[property]?.name || 'N/A';
-      return obj[property]._id;
+      return obj[property].name || obj[property]._id || JSON.stringify(obj[property]);
     }
     
     return obj[property];
@@ -493,7 +481,7 @@ const LeadsAdminPanel = () => {
                 <Typography variant="subtitle2"><b>Date Received</b></Typography>
                 <Typography sx={{ mt: 1 }}>{formatDate(selectedLead.createdAt)}</Typography>
               </Grid>
-              {/* Message */}
+              {/* {Message} */}
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2"><b>Message</b></Typography>
                 <Typography sx={{ mt: 1 }}>{selectedLead.message}</Typography>
@@ -724,9 +712,9 @@ const LeadsAdminPanel = () => {
             onClick={createLead} 
             variant="contained" 
             color="primary"
-            disabled={!newLead.name || !newLead.email || !newLead.phone || isCreatingLead}
+            disabled={!newLead.name || !newLead.email || !newLead.phone}
           >
-            {isCreatingLead ? 'Creating...' : 'Create Lead'}
+            Create Lead
           </Button>
         </DialogActions>
       </Dialog>
