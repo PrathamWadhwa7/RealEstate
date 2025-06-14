@@ -20,6 +20,17 @@ exports.getAllLeads = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+exports.getLeadById = async (req, res) => {
+  try {
+    const leadById = await Lead.findById(req.params.id)
+    .populate('property')
+    .populate('Area');
+    if (!leadById) return res.status(404).json({ error: "Lead not found" });
+    res.json(leadById);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 exports.deleteLead = async (req, res) => {
   try {

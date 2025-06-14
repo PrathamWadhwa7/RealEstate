@@ -1,7 +1,13 @@
-.main-content {
-  margin-top: 64px;
-  min-height: calc(100vh - 64px);
-  padding: 16px;
-  max-width: 100vw;
+
+html, body {
   overflow-x: hidden;
+  background-image: url('../public/bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  color: white;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
 }

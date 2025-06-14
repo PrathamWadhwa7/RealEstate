@@ -1,7 +1,7 @@
 /* Navbar.css */
 .navbar {
   box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 1400 !important; /* Increased z-index to ensure it stays on top */
+  z-index: 1200 !important; /* Increased z-index to ensure it stays on top */
   background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
   transition: all 0.3s ease;
   width: 100%;
@@ -99,13 +99,12 @@
 .nav-link-button:hover {
   background: rgba(255, 255, 255, 0.1);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .nav-link-content {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
 }
 
 .nav-link-content svg {
@@ -285,7 +284,7 @@ body {
 /* Animation for drawer */
 .MuiDrawer-root .MuiBackdrop-root {
   background-color: rgba(0, 0, 0, 0.5) !important;
-  z-index: 1300 !important;
+  z-index: 1400 !important;
 }
 
 /* Drawer backdrop */
