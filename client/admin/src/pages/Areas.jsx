@@ -34,7 +34,6 @@ import {
   Divider,
   Tooltip,
   Autocomplete,
-  DialogContentText,
   ImageList,
   ImageListItem,
   ImageListItemBar,
@@ -51,6 +50,20 @@ import {
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import axiosInstance from '../api/axiosInstance';
+
+// Common attractions for suggestions
+const commonAttractions = [
+  'Shopping Mall',
+  'Park',
+  'Museum',
+  'Theater',
+  'Restaurant Area',
+  'Historic Site',
+  'Sports Complex',
+  'Lake',
+  'Convention Center',
+  'Zoo'
+];
 
 const AreasAdminPanel = () => {
   const [areas, setAreas] = useState([]);
@@ -167,7 +180,13 @@ const AreasAdminPanel = () => {
     setViewMode(viewOnly);
     if (area) {
       setEditingArea(area);
-      setFormData(JSON.parse(JSON.stringify(area)));
+      setFormData({
+        ...JSON.parse(JSON.stringify(area)),
+        highlights: {
+          ...area.highlights,
+          majorAttractions: area.highlights.majorAttractions || []
+        }
+      });
     } else {
       setEditingArea(null);
       setFormData({
@@ -195,7 +214,11 @@ const AreasAdminPanel = () => {
   const handleSubmit = async () => {
     const areaData = {
       ...formData,
-      subAreas: formData.subAreas || []
+      subAreas: formData.subAreas || [],
+      highlights: {
+        ...formData.highlights,
+        majorAttractions: formData.highlights.majorAttractions || []
+      }
     };
 
     if (editingArea) {
@@ -284,7 +307,7 @@ const AreasAdminPanel = () => {
   return (
     <Box sx={{ p: 0, width: '100vw', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       {/* Header */}
-      <Paper sx={{ p: 7, mb: 3, background: 'linear-gradient(135deg, #3f51b5 0%, #283593 100%)', color: 'white' }}>
+      <Paper sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #3f51b5 0%, #283593 100%)', color: 'white' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar sx={{ bgcolor: 'white', color: '#3f51b5' }}>
@@ -453,11 +476,11 @@ const AreasAdminPanel = () => {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        {area.highlights.majorAttractions.slice(0, 2).map((att, i) => (
+                        {(area.highlights.majorAttractions || []).slice(0, 2).map((att, i) => (
                           <Chip key={i} label={att} size="small" />
                         ))}
-                        {area.highlights.majorAttractions.length > 2 && (
-                          <Chip label={`+${area.highlights.majorAttractions.length - 2}`} size="small" />
+                        {(area.highlights.majorAttractions || []).length > 2 && (
+                          <Chip label={`+${(area.highlights.majorAttractions || []).length - 2}`} size="small" />
                         )}
                       </Box>
                     </TableCell>
@@ -546,6 +569,21 @@ const AreasAdminPanel = () => {
                 </Grid>
               </Grid>
 
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>Major Attractions</Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {(formData.highlights.majorAttractions || []).length > 0 ? (
+                    (formData.highlights.majorAttractions || []).map((attraction, index) => (
+                      <Chip key={index} label={attraction} />
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No major attractions listed
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+
               {formData.images.length > 0 && (
                 <>
                   <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Images</Typography>
@@ -567,6 +605,7 @@ const AreasAdminPanel = () => {
                       <TableRow>
                         <TableCell>Name</TableCell>
                         <TableCell>Description</TableCell>
+                        <TableCell>Image</TableCell>
                         <TableCell>Safety</TableCell>
                         <TableCell>Green Zones</TableCell>
                       </TableRow>
@@ -580,6 +619,17 @@ const AreasAdminPanel = () => {
                               <span>{subArea.description.substring(0, 30)}{subArea.description.length > 30 ? '...' : ''}</span>
                             </Tooltip>
                           </TableCell>
+                           <TableCell>
+              {subArea.images?.length > 0 ? (
+                <img 
+                  src={subArea.images[0]} 
+                  alt={`Sub-area ${index}`} 
+                  style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }}
+                />
+              ) : (
+                <Typography variant="body2" color="text.secondary">No image</Typography>
+              )}
+            </TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               {subArea.highlights.safetyRating}/10
@@ -703,19 +753,31 @@ const AreasAdminPanel = () => {
                   label="Has Metro Connectivity"
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={12} sx={{width: 200}}>
                 <Autocomplete
                   multiple
                   freeSolo
-                  options={[]}
-                  value={formData.highlights.majorAttractions}
-                  onChange={(e, newValue) => setFormData({
-                    ...formData, 
-                    highlights: {...formData.highlights, majorAttractions: newValue}
-                  })}
+                  options={commonAttractions}
+                  value={formData.highlights.majorAttractions || []}
+                  onChange={(event, newValue) => {
+                    // Filter out empty strings
+                    const filteredValue = newValue.filter(item => item.trim() !== '');
+                    setFormData({
+                      ...formData, 
+                      highlights: {
+                        ...formData.highlights, 
+                        majorAttractions: filteredValue
+                      }
+                    });
+                  }}
                   renderTags={(value, getTagProps) =>
                     value.map((option, index) => (
-                      <Chip key={index} variant="outlined" label={option} {...getTagProps({ index })} />
+                      <Chip 
+                        key={index} 
+                        variant="outlined" 
+                        label={option} 
+                        {...getTagProps({ index })} 
+                      />
                     ))
                   }
                   renderInput={(params) => (

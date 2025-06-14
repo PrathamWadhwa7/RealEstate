@@ -21,6 +21,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import HomeWorkIcon from "@mui/icons-material/HomeWork";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import PeopleIcon from "@mui/icons-material/People";
+import ArticleIcon from '@mui/icons-material/Article';
 import { useNavigate } from "react-router-dom";
 import "./Navbar.css";
 
@@ -50,6 +51,8 @@ const Navbar = ({ isLoggedIn, setIsLoggedIn }) => {
     { text: "Properties", icon: <HomeWorkIcon />, path: "/properties" },
     { text: "Areas", icon: <LocationOnIcon />, path: "/area" },
     { text: "Leads", icon: <PeopleIcon />, path: "/leads" },
+    { text: "Services", icon: <ArticleIcon />, path: "/services" },
+    { text: "Blogs", icon: <ArticleIcon />, path: "/blogs" },
   ];
 
   const navItems = (

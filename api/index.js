@@ -5,11 +5,12 @@ const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const authRoutes = require("./routes/auth");
-const propertyRoutes = require("./routes/properties");
-const leadRoutes = require("./routes/leads");
+const authRoutes = require("./Routes/auth");
+const propertyRoutes = require("./Routes/properties");
+const leadRoutes = require("./Routes/leads");
 const blogRoutes = require("./Routes/blog");
 const areaRoutes = require("./Routes/area");
+const serviceRoutes = require("./Routes/service");
 
 dotenv.config();
 const app = express();
@@ -24,6 +25,7 @@ app.use("/api/properties", propertyRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/areas", areaRoutes);
+app.use("/api/services", serviceRoutes);
 
 // Connect to MongoDB and start server
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
