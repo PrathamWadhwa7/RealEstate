@@ -26,9 +26,9 @@ import {
   Fab,
   Avatar,
   Tooltip,
-  ImageList,
-  ImageListItem,
-  ImageListItemBar,
+  CircularProgress,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -36,7 +36,9 @@ import {
   Delete as DeleteIcon,
   Work as ServiceIcon,
   AttachMoney as PriceIcon,
-  Visibility as VisibilityIcon
+  Visibility as VisibilityIcon,
+  CloudUpload as UploadIcon,
+  Delete as DeleteImageIcon
 } from '@mui/icons-material';
 import axiosInstance from '../api/axiosInstance';
 import { format } from 'date-fns';
@@ -51,6 +53,10 @@ const ServicesAdminPanel = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [removeImage, setRemoveImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -78,25 +84,70 @@ const ServicesAdminPanel = () => {
 
   const createService = async (serviceData) => {
     try {
-      const response = await axiosInstance.post('/services/', serviceData);
+      const formData = new FormData();
+      formData.append('name', serviceData.name);
+      formData.append('description', serviceData.description);
+      formData.append('features', JSON.stringify(serviceData.features));
+      formData.append('price', serviceData.price);
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+
+      const response = await axiosInstance.post('/services/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        }
+      });
+
       const newService = response.data;
       setServices(prev => [...prev, newService]);
       setFilteredServices(prev => [...prev, newService]);
       showSnackbar('Service created successfully!', 'success');
+      return newService;
     } catch (error) {
       handleApiError(error, 'creating service');
+      throw error;
+    } finally {
+      setUploadProgress(0);
     }
   };
 
   const updateService = async (id, serviceData) => {
     try {
-      const response = await axiosInstance.put(`/services/${id}`, serviceData);
+      const formData = new FormData();
+      formData.append('name', serviceData.name);
+      formData.append('description', serviceData.description);
+      formData.append('features', JSON.stringify(serviceData.features));
+      formData.append('price', serviceData.price);
+      formData.append('removeImage', removeImage.toString());
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+
+      const response = await axiosInstance.put(`/services/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        }
+      });
+
       const updatedService = response.data;
       setServices(prev => prev.map(s => s._id === id ? updatedService : s));
       setFilteredServices(prev => prev.map(s => s._id === id ? updatedService : s));
       showSnackbar('Service updated successfully!', 'success');
+      return updatedService;
     } catch (error) {
       handleApiError(error, 'updating service');
+      throw error;
+    } finally {
+      setUploadProgress(0);
     }
   };
 
@@ -130,12 +181,19 @@ const ServicesAdminPanel = () => {
 
   const handleOpenDialog = (service = null, viewOnly = false) => {
     setViewMode(viewOnly);
+    setImageFile(null);
+    setImagePreview('');
+    setRemoveImage(false);
+    
     if (service) {
       setEditingService(service);
       setFormData({
         ...service,
-        features: [...service.features] // Ensure we get a new array reference
+        features: [...service.features]
       });
+      if (service.image?.url) {
+        setImagePreview(service.image.url);
+      }
     } else {
       setEditingService(null);
       setFormData({
@@ -153,20 +211,48 @@ const ServicesAdminPanel = () => {
     setOpenDialog(false);
     setEditingService(null);
     setViewMode(false);
+    setImageFile(null);
+    setImagePreview('');
+    setRemoveImage(false);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setRemoveImage(false);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+    setRemoveImage(true);
   };
 
   const handleSubmit = async () => {
-    const serviceData = {
-      ...formData,
-      price: Number(formData.price) // Ensure price is a number
-    };
+    try {
+      const serviceData = {
+        ...formData,
+        price: Number(formData.price)
+      };
 
-    if (editingService) {
-      await updateService(editingService._id, serviceData);
-    } else {
-      await createService(serviceData);
+      if (editingService) {
+        await updateService(editingService._id, serviceData);
+      } else {
+        await createService(serviceData);
+      }
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error submitting form:', error);
     }
-    handleCloseDialog();
   };
 
   const handleDelete = async (id) => {
@@ -295,68 +381,94 @@ const ServicesAdminPanel = () => {
             <TableHead sx={{ backgroundColor: '#f8f9fa' }}>
               <TableRow>
                 <TableCell><strong>Service Name</strong></TableCell>
+                <TableCell><strong>Image</strong></TableCell>
                 <TableCell><strong>Features</strong></TableCell>
                 <TableCell><strong>Price</strong></TableCell>
                 <TableCell><strong>Actions</strong></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredServices
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((service) => (
-                  <TableRow key={service._id} hover>
-                    <TableCell>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                        {service.name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        {service.features.slice(0, 3).map((feature, i) => (
-                          <Chip key={i} label={feature} size="small" />
-                        ))}
-                        {service.features.length > 3 && (
-                          <Chip label={`+${service.features.length - 3}`} size="small" />
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    <CircularProgress />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredServices
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((service) => (
+                    <TableRow key={service._id} hover>
+                      <TableCell>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                          {service.name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {service.image?.url ? (
+                          <Box
+                            component="img"
+                            src={service.image.url}
+                            alt={service.name}
+                            sx={{
+                              width: 50,
+                              height: 50,
+                              objectFit: 'cover',
+                              borderRadius: 1
+                            }}
+                          />
+                        ) : (
+                          <ServiceIcon sx={{ fontSize: 40, color: 'action.disabled' }} />
                         )}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography>
-                        {formatCurrency(service.price)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Tooltip title="Edit">
-                          <IconButton 
-                            color="primary" 
-                            onClick={() => handleOpenDialog(service)}
-                            size="small"
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton 
-                            color="error" 
-                            onClick={() => handleDelete(service._id)}
-                            size="small"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="View Details">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleOpenDialog(service, true)}
-                          >
-                            <VisibilityIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          {service.features.slice(0, 3).map((feature, i) => (
+                            <Chip key={i} label={feature} size="small" />
+                          ))}
+                          {service.features.length > 3 && (
+                            <Chip label={`+${service.features.length - 3}`} size="small" />
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography>
+                          {formatCurrency(service.price)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Tooltip title="Edit">
+                            <IconButton 
+                              color="primary" 
+                              onClick={() => handleOpenDialog(service)}
+                              size="small"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete">
+                            <IconButton 
+                              color="error" 
+                              onClick={() => handleDelete(service._id)}
+                              size="small"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="View Details">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenDialog(service, true)}
+                            >
+                              <VisibilityIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -399,18 +511,20 @@ const ServicesAdminPanel = () => {
                 ))}
               </Box>
 
-              {formData.image && (
+              {formData.image?.url && (
                 <>
                   <Typography variant="h6" gutterBottom>Service Image</Typography>
-                  <img 
-                    src={formData.image} 
-                    alt="Service" 
-                    style={{ 
-                      maxWidth: '100%', 
-                      maxHeight: '300px',
-                      borderRadius: '8px'
-                    }} 
-                  />
+                  <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                    <img 
+                      src={formData.image.url} 
+                      alt="Service" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '300px',
+                        borderRadius: '8px'
+                      }} 
+                    />
+                  </Box>
                 </>
               )}
             </Box>
@@ -455,14 +569,61 @@ const ServicesAdminPanel = () => {
                 />
               </Grid>
               
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Image URL"
-                  value={formData.image}
-                  onChange={(e) => setFormData({...formData, image: e.target.value})}
-                  margin="dense"
-                />
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" sx={{ mb: 1 }}>Image</Typography>
+                <Box sx={{ mb: 2 }}>
+                  {imagePreview ? (
+                    <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                      <img 
+                        src={imagePreview} 
+                        alt="Preview" 
+                        style={{ 
+                          maxWidth: '100%', 
+                          maxHeight: '200px',
+                          borderRadius: '8px'
+                        }} 
+                      />
+                      <IconButton
+                        color="error"
+                        onClick={handleRemoveImage}
+                        sx={{ 
+                          position: 'absolute', 
+                          top: 8, 
+                          right: 8,
+                          backgroundColor: 'rgba(255, 255, 255, 0.7)'
+                        }}
+                      >
+                        <DeleteImageIcon />
+                      </IconButton>
+                    </Box>
+                  ) : (
+                    <Button
+                      component="label"
+                      variant="outlined"
+                      startIcon={<UploadIcon />}
+                      sx={{ mr: 2 }}
+                    >
+                      Upload Image
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handleImageChange}
+                      />
+                    </Button>
+                  )}
+                </Box>
+                {editingService?.image?.url && !imagePreview && !removeImage && (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={removeImage}
+                        onChange={(e) => setRemoveImage(e.target.checked)}
+                      />
+                    }
+                    label="Remove current image"
+                  />
+                )}
               </Grid>
               
               <Grid item xs={12}>
@@ -492,6 +653,15 @@ const ServicesAdminPanel = () => {
                   Add Feature
                 </Button>
               </Grid>
+              
+              {uploadProgress > 0 && (
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <CircularProgress variant="determinate" value={uploadProgress} />
+                    <Typography>Uploading: {uploadProgress}%</Typography>
+                  </Box>
+                </Grid>
+              )}
             </Grid>
           )}
         </DialogContent>
@@ -507,7 +677,7 @@ const ServicesAdminPanel = () => {
                 background: 'linear-gradient(45deg, #FF7043 30%, #FF5722 90%)',
                 '&:hover': { background: 'linear-gradient(45deg, #FF7043 60%, #FF5722 100%)' }
               }}
-              disabled={!formData.name || !formData.description || formData.price === ''}
+              disabled={!formData.name || !formData.description || formData.price === '' || uploadProgress > 0}
             >
               {editingService ? 'Update' : 'Create'}
             </Button>

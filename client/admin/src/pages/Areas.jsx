@@ -51,7 +51,6 @@ import {
 } from '@mui/icons-material';
 import axiosInstance from '../api/axiosInstance';
 
-// Common attractions for suggestions
 const commonAttractions = [
   'Shopping Mall',
   'Park',
@@ -81,7 +80,6 @@ const AreasAdminPanel = () => {
   });
   const [subAreaDialogOpen, setSubAreaDialogOpen] = useState(false);
   const [currentSubArea, setCurrentSubArea] = useState(null);
-  const [imageUploads, setImageUploads] = useState([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -125,28 +123,176 @@ const AreasAdminPanel = () => {
   };
 
   const createArea = async (areaData) => {
-    try {
-      const response = await axiosInstance.post('/areas/', areaData);
-      const newArea = response.data;
-      setAreas(prev => [...prev, newArea]);
-      setFilteredAreas(prev => [...prev, newArea]);
-      showSnackbar('Area created successfully!', 'success');
-    } catch (error) {
-      handleApiError(error, 'creating area');
-    }
-  };
+  try {
+    const formData = new FormData();
+    
+    // Append basic fields
+    formData.append('name', areaData.name);
+    formData.append('description', areaData.description);
+    
+    // Format highlights properly
+    const highlights = {
+      totalPopulation: Number(areaData.highlights.totalPopulation) || 0,
+      averagePricePerSqft: Number(areaData.highlights.averagePricePerSqft) || 0,
+      majorAttractions: Array.isArray(areaData.highlights.majorAttractions) 
+        ? areaData.highlights.majorAttractions.filter(a => a && a.trim() !== '')
+        : [],
+      hasMetroConnectivity: Boolean(areaData.highlights.hasMetroConnectivity)
+    };
+    formData.append('highlights', JSON.stringify(highlights));
+    
+    // Format subAreas properly
+    const subAreas = Array.isArray(areaData.subAreas) 
+      ? areaData.subAreas.map(subArea => ({
+          name: subArea.name || '',
+          description: subArea.description || '',
+          images: Array.isArray(subArea.images) ? subArea.images : [],
+          highlights: {
+            roads: subArea.highlights?.roads || '',
+            metroAccess: subArea.highlights?.metroAccess || '',
+            safetyRating: Number(subArea.highlights?.safetyRating) || 5,
+            greenZones: Boolean(subArea.highlights?.greenZones)
+          }
+        }))
+      : [];
+    formData.append('subAreas', JSON.stringify(subAreas));
 
-  const updateArea = async (id, areaData) => {
-    try {
-      const response = await axiosInstance.put(`/areas/${id}`, areaData);
-      const updatedArea = response.data;
-      setAreas(prev => prev.map(a => a._id === id ? updatedArea : a));
-      setFilteredAreas(prev => prev.map(a => a._id === id ? updatedArea : a));
-      showSnackbar('Area updated successfully!', 'success');
-    } catch (error) {
-      handleApiError(error, 'updating area');
+    // Handle images - separate new files from existing references
+    areaData.images.forEach((img, index) => {
+      if (img instanceof File) {
+        formData.append('images', img, `image-${index}`);
+      }
+    });
+
+    // Add debug output to see what's being sent
+    console.log('FormData contents:');
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value);
     }
-  };
+
+    const response = await axiosInstance.post('/areas/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    const newArea = response.data;
+    setAreas(prev => [...prev, newArea]);
+    setFilteredAreas(prev => [...prev, newArea]);
+    showSnackbar('Area created successfully!', 'success');
+    return newArea;
+  } catch (error) {
+    console.error('Error creating area:', {
+      message: error.message,
+      response: error.response?.data,
+      config: error.config
+    });
+    
+    let errorMessage = 'Error creating area';
+    if (error.response?.data?.error) {
+      errorMessage += `: ${error.response.data.error}`;
+    } else if (error.response?.data?.message) {
+      errorMessage += `: ${error.response.data.message}`;
+    } else {
+      errorMessage += `: ${error.message}`;
+    }
+    
+    showSnackbar(errorMessage, 'error');
+    throw error; // Re-throw the error for handling in the calling function
+  }
+};
+
+ const updateArea = async (id, areaData) => {
+  try {
+    const formData = new FormData();
+    
+    // Append basic fields
+    formData.append('name', areaData.name);
+    formData.append('description', areaData.description);
+    
+    // Properly format highlights object
+    const highlights = {
+      totalPopulation: Number(areaData.highlights.totalPopulation) || 0,
+      averagePricePerSqft: Number(areaData.highlights.averagePricePerSqft) || 0,
+      majorAttractions: Array.isArray(areaData.highlights.majorAttractions) 
+        ? areaData.highlights.majorAttractions.filter(a => a && a.trim() !== '')
+        : [],
+      hasMetroConnectivity: Boolean(areaData.highlights.hasMetroConnectivity)
+    };
+    formData.append('highlights', JSON.stringify(highlights));
+    
+    // Properly format subAreas array
+    const subAreas = Array.isArray(areaData.subAreas) 
+      ? areaData.subAreas.map(subArea => ({
+          name: subArea.name || '',
+          description: subArea.description || '',
+          images: Array.isArray(subArea.images) ? subArea.images : [],
+          highlights: {
+            roads: subArea.highlights?.roads || '',
+            metroAccess: subArea.highlights?.metroAccess || '',
+            safetyRating: Number(subArea.highlights?.safetyRating) || 5,
+            greenZones: Boolean(subArea.highlights?.greenZones)
+          }
+        }))
+      : [];
+    formData.append('subAreas', JSON.stringify(subAreas));
+
+    // Handle images - separate new files from existing references
+    const newImages = [];
+    const existingImages = [];
+    
+    areaData.images.forEach(img => {
+      if (img instanceof File) {
+        newImages.push(img);
+      } else if (img && (img.url || img.public_id)) {
+        existingImages.push({
+          url: img.url,
+          public_id: img.public_id
+        });
+      }
+    });
+
+    // Append new images
+    newImages.forEach(img => {
+      formData.append('images', img);
+    });
+
+    // Append existing images
+    if (existingImages.length > 0) {
+      formData.append('existingImages', JSON.stringify(existingImages));
+    }
+
+    const response = await axiosInstance.put(`/areas/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    const updatedArea = response.data;
+    setAreas(prev => prev.map(a => a._id === id ? updatedArea : a));
+    setFilteredAreas(prev => prev.map(a => a._id === id ? updatedArea : a));
+    showSnackbar('Area updated successfully!', 'success');
+    return true;
+  } catch (error) {
+    console.error('Update area error:', {
+      message: error.message,
+      response: error.response?.data,
+      config: error.config
+    });
+    
+    let errorMessage = 'Error updating area';
+    if (error.response?.data?.error) {
+      errorMessage += `: ${error.response.data.error}`;
+    } else if (error.response?.data?.message) {
+      errorMessage += `: ${error.response.data.message}`;
+    } else {
+      errorMessage += `: ${error.message}`;
+    }
+    
+    showSnackbar(errorMessage, 'error');
+    return false;
+  }
+};
 
   const deleteArea = async (id) => {
     try {
@@ -156,6 +302,83 @@ const AreasAdminPanel = () => {
       showSnackbar('Area deleted successfully!', 'success');
     } catch (error) {
       handleApiError(error, 'deleting area');
+    }
+  };
+
+  const deleteAreaImage = async (areaId, publicId) => {
+     if (publicId.includes('/')) {
+      publicId = publicId.split('/').pop();
+    }
+    try {
+      await axiosInstance.delete(`/areas/${areaId}/images/${publicId}`);
+      const updatedAreas = areas.map(area => {
+        if (area._id === areaId) {
+          return {
+            ...area,
+            images: area.images.filter(img => img.public_id !== publicId)
+          };
+        }
+        return area;
+      });
+      setAreas(updatedAreas);
+      setFilteredAreas(updatedAreas);
+      
+      // If we're editing this area, update the form data
+      if (editingArea && editingArea._id === areaId) {
+        setFormData(prev => ({
+          ...prev,
+          images: prev.images.filter(img => img.public_id !== publicId)
+        }));
+      }
+      
+      showSnackbar('Image deleted successfully!', 'success');
+    } catch (error) {
+      handleApiError(error, 'deleting image');
+    }
+  };
+
+  const deleteSubAreaImage = async (areaId, subAreaIndex, publicId) => {
+    try {
+      await axiosInstance.delete(`/areas/${areaId}/subareas/${subAreaIndex}/images/${publicId}`);
+      const updatedAreas = areas.map(area => {
+        if (area._id === areaId) {
+          const updatedSubAreas = area.subAreas.map((subArea, idx) => {
+            if (idx === parseInt(subAreaIndex)) {
+              return {
+                ...subArea,
+                images: subArea.images.filter(img => img.public_id !== publicId)
+              };
+            }
+            return subArea;
+          });
+          return {
+            ...area,
+            subAreas: updatedSubAreas
+          };
+        }
+        return area;
+      });
+      setAreas(updatedAreas);
+      setFilteredAreas(updatedAreas);
+      
+      // If we're editing this area, update the form data
+      if (editingArea && editingArea._id === areaId) {
+        setFormData(prev => {
+          const updatedSubAreas = [...prev.subAreas];
+          updatedSubAreas[subAreaIndex] = {
+            ...updatedSubAreas[subAreaIndex],
+            images: updatedSubAreas[subAreaIndex].images.filter(img => img.public_id !== publicId)
+          };
+          return {
+            ...prev,
+            subAreas: updatedSubAreas
+          };
+        });
+      }
+      
+      showSnackbar('Sub-area image deleted successfully!', 'success');
+    } catch (error) {
+      handleApiError(error, 'deleting sub-area image');
     }
   };
 
@@ -181,11 +404,16 @@ const AreasAdminPanel = () => {
     if (area) {
       setEditingArea(area);
       setFormData({
-        ...JSON.parse(JSON.stringify(area)),
+        name: area.name || '',
+        description: area.description || '',
+        images: area.images || [],
         highlights: {
-          ...area.highlights,
-          majorAttractions: area.highlights.majorAttractions || []
-        }
+          totalPopulation: area.highlights?.totalPopulation || 0,
+          averagePricePerSqft: area.highlights?.averagePricePerSqft || 0,
+          majorAttractions: area.highlights?.majorAttractions || [],
+          hasMetroConnectivity: area.highlights?.hasMetroConnectivity || false
+        },
+        subAreas: area.subAreas || []
       });
     } else {
       setEditingArea(null);
@@ -212,22 +440,32 @@ const AreasAdminPanel = () => {
   };
 
   const handleSubmit = async () => {
-    const areaData = {
-      ...formData,
-      subAreas: formData.subAreas || [],
-      highlights: {
-        ...formData.highlights,
-        majorAttractions: formData.highlights.majorAttractions || []
-      }
-    };
+  const areaData = {
+    ...formData,
+    highlights: {
+      ...formData.highlights,
+      totalPopulation: Number(formData.highlights.totalPopulation) || 0,
+      averagePricePerSqft: Number(formData.highlights.averagePricePerSqft) || 0,
+      majorAttractions: Array.isArray(formData.highlights.majorAttractions) 
+        ? formData.highlights.majorAttractions.filter(a => a && a.trim() !== '')
+        : [],
+      hasMetroConnectivity: Boolean(formData.highlights.hasMetroConnectivity)
+    },
+    subAreas: Array.isArray(formData.subAreas) ? formData.subAreas : []
+  };
 
+  try {
     if (editingArea) {
       await updateArea(editingArea._id, areaData);
     } else {
       await createArea(areaData);
     }
     handleCloseDialog();
-  };
+  } catch (error) {
+    console.error('Error submitting area:', error);
+    // Error is already shown by createArea/updateArea
+  }
+};
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this area?')) {
@@ -241,11 +479,11 @@ const AreasAdminPanel = () => {
     
     let filtered = areas;
     if (newFilters.hasMetro !== '') {
-      filtered = filtered.filter(a => a.highlights.hasMetroConnectivity === (newFilters.hasMetro === 'yes'));
+      filtered = filtered.filter(a => a.highlights?.hasMetroConnectivity === (newFilters.hasMetro === 'yes'));
     }
     if (newFilters.minSafetyRating) {
       filtered = filtered.filter(a => 
-        a.subAreas.some(sa => sa.highlights.safetyRating >= parseInt(newFilters.minSafetyRating))
+        a.subAreas?.some(sa => sa.highlights?.safetyRating >= parseInt(newFilters.minSafetyRating))
       );
     }
     
@@ -255,38 +493,73 @@ const AreasAdminPanel = () => {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    const newImages = files.map(file => URL.createObjectURL(file));
     setFormData(prev => ({
       ...prev,
-      images: [...prev.images, ...newImages]
+      images: [...prev.images, ...files]
     }));
   };
 
   const handleRemoveImage = (index) => {
     const newImages = [...formData.images];
-    newImages.splice(index, 1);
+    const removedImage = newImages.splice(index, 1)[0];
     setFormData(prev => ({
       ...prev,
       images: newImages
     }));
+    
+    // If this was a previously uploaded image (has public_id), delete it from server
+    if (removedImage?.public_id && editingArea) {
+      deleteAreaImage(editingArea._id, removedImage.public_id);
+    }
+  };
+
+  const handleSubAreaImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    setSubAreaFormData(prev => ({
+      ...prev,
+      images: [...prev.images, ...files]
+    }));
+  };
+
+  const handleRemoveSubAreaImage = (index) => {
+    const newImages = [...subAreaFormData.images];
+    const removedImage = newImages.splice(index, 1)[0];
+    setSubAreaFormData(prev => ({
+      ...prev,
+      images: newImages
+    }));
+    
+    // If this was a previously uploaded image (has public_id), delete it from server
+    if (removedImage?.public_id && editingArea && currentSubArea) {
+      const subAreaIndex = formData.subAreas.findIndex(sa => sa === currentSubArea);
+      if (subAreaIndex !== -1) {
+        deleteSubAreaImage(editingArea._id, subAreaIndex, removedImage.public_id);
+      }
+    }
   };
 
   const handleSubAreaSubmit = () => {
-    if (currentSubArea) {
-      const updatedSubAreas = formData.subAreas.map(sa => 
-        sa === currentSubArea ? subAreaFormData : sa
-      );
-      setFormData({
-        ...formData,
-        subAreas: updatedSubAreas
-      });
-    } else {
-      setFormData({
-        ...formData,
-        subAreas: [...formData.subAreas, subAreaFormData]
-      });
+    try {
+      if (currentSubArea) {
+        // Editing existing sub-area
+        const updatedSubAreas = formData.subAreas.map(sa => 
+          sa === currentSubArea ? subAreaFormData : sa
+        );
+        setFormData(prev => ({
+          ...prev,
+          subAreas: updatedSubAreas
+        }));
+      } else {
+        // Adding new sub-area
+        setFormData(prev => ({
+          ...prev,
+          subAreas: [...prev.subAreas, subAreaFormData]
+        }));
+      }
+      setSubAreaDialogOpen(false);
+    } catch (error) {
+      console.error('Error submitting sub-area:', error);
     }
-    setSubAreaDialogOpen(false);
   };
 
   const handleDeleteSubArea = (index) => {
@@ -303,6 +576,36 @@ const AreasAdminPanel = () => {
   const formatNumber = (num) => {
     return new Intl.NumberFormat().format(num);
   };
+
+  // const getImageUrl = (img) => {
+  //   if (typeof img === 'string') return img;
+  //   if (img.url) return img.url;
+  //   if (img instanceof File) return URL.createObjectURL(img);
+  //   return '';
+  // };
+//   const getImageUrl = (img) => {
+//   if (!img) return img;
+//   if (typeof img === 'string') return img;
+//   if (img.url) return img.url;
+//   if (img instanceof File) return URL.createObjectURL(img);
+//   console.log(img.url);
+//   if (img.public_id) {
+//     // Handle Cloudinary or similar hosted images
+//     return `https://res.cloudinary.com/dovkxkufe/image/upload/${img.public_id}`;
+//   }
+//   return '';
+// };
+const getImageUrl = (img) => {
+  if (!img) return ''; // Return empty string instead of img
+  if (typeof img === 'string') return img;
+  if (img.url) return img.url;
+  if (img instanceof File) return URL.createObjectURL(img);
+  if (img.public_id) {
+    // Handle Cloudinary or similar hosted images
+    return `https://res.cloudinary.com/dovkxkufe/image/upload/${img.public_id}`;
+  }
+  return '';
+};
 
   return (
     <Box sx={{ p: 0, width: '100vw', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
@@ -353,7 +656,7 @@ const AreasAdminPanel = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography variant="h4">
-                    {formatNumber(areas.reduce((sum, area) => sum + area.highlights.totalPopulation, 0))}
+                    {formatNumber(areas.reduce((sum, area) => sum + (area.highlights?.totalPopulation || 0), 0))}
                   </Typography>
                   <Typography variant="body2">Total Population</Typography>
                 </Box>
@@ -368,7 +671,7 @@ const AreasAdminPanel = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography variant="h4">
-                    ₹{formatNumber(Math.round(areas.reduce((sum, area) => sum + area.highlights.averagePricePerSqft, 0) / (areas.length || 1)))}
+                    ₹{formatNumber(Math.round(areas.reduce((sum, area) => sum + (area.highlights?.averagePricePerSqft || 0), 0) / (areas.length || 1)))}
                   </Typography>
                   <Typography variant="body2">Avg Price/sqft</Typography>
                 </Box>
@@ -383,7 +686,7 @@ const AreasAdminPanel = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography variant="h4">
-                    {areas.filter(a => a.highlights.hasMetroConnectivity).length}
+                    {areas.filter(a => a.highlights?.hasMetroConnectivity).length}
                   </Typography>
                   <Typography variant="body2">With Metro</Typography>
                 </Box>
@@ -441,6 +744,7 @@ const AreasAdminPanel = () => {
             <TableHead sx={{ backgroundColor: '#f8f9fa' }}>
               <TableRow>
                 <TableCell><strong>Area</strong></TableCell>
+                <TableCell><strong>Image</strong></TableCell>
                 <TableCell><strong>Population</strong></TableCell>
                 <TableCell><strong>Avg Price/sqft</strong></TableCell>
                 <TableCell><strong>Attractions</strong></TableCell>
@@ -460,27 +764,40 @@ const AreasAdminPanel = () => {
                           {area.name}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {area.description.substring(0, 50)}...
+                          {area.description?.substring(0, 50) || ''}...
                         </Typography>
                       </Box>
                     </TableCell>
+                     <TableCell>
+                      {area.images?.length > 0 ? (
+                        <img 
+                          src={getImageUrl(area.images[0])} 
+                          alt={area.name}
+                          style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }}
+                        />
+                      ) : (
+                        <Avatar sx={{ bgcolor: 'grey.300' }}>
+                          <CityIcon />
+                        </Avatar>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Typography>
-                        {formatNumber(area.highlights.totalPopulation)}
+                        {formatNumber(area.highlights?.totalPopulation || 0)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography sx={{ fontWeight: 'bold' }}>
-                        ₹{formatNumber(area.highlights.averagePricePerSqft)}
+                        ₹{formatNumber(area.highlights?.averagePricePerSqft || 0)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        {(area.highlights.majorAttractions || []).slice(0, 2).map((att, i) => (
+                        {(area.highlights?.majorAttractions || []).slice(0, 2).map((att, i) => (
                           <Chip key={i} label={att} size="small" />
                         ))}
-                        {(area.highlights.majorAttractions || []).length > 2 && (
-                          <Chip label={`+${(area.highlights.majorAttractions || []).length - 2}`} size="small" />
+                        {(area.highlights?.majorAttractions || []).length > 2 && (
+                          <Chip label={`+${(area.highlights?.majorAttractions || []).length - 2}`} size="small" />
                         )}
                       </Box>
                     </TableCell>
@@ -491,8 +808,8 @@ const AreasAdminPanel = () => {
                     </TableCell>
                     <TableCell>
                       <Chip 
-                        label={area.highlights.hasMetroConnectivity ? 'Yes' : 'No'} 
-                        color={area.highlights.hasMetroConnectivity ? 'success' : 'default'}
+                        label={area.highlights?.hasMetroConnectivity ? 'Yes' : 'No'} 
+                        color={area.highlights?.hasMetroConnectivity ? 'success' : 'default'}
                         size="small"
                       />
                     </TableCell>
@@ -590,7 +907,11 @@ const AreasAdminPanel = () => {
                   <ImageList cols={3} rowHeight={164}>
                     {formData.images.map((img, index) => (
                       <ImageListItem key={index}>
-                        <img src={img} alt={`Area ${index}`} />
+                        <img 
+                          src={getImageUrl(img)} 
+                          alt={`Area ${index}`} 
+                          loading="lazy"
+                        />
                       </ImageListItem>
                     ))}
                   </ImageList>
@@ -616,28 +937,28 @@ const AreasAdminPanel = () => {
                           <TableCell>{subArea.name}</TableCell>
                           <TableCell>
                             <Tooltip title={subArea.description}>
-                              <span>{subArea.description.substring(0, 30)}{subArea.description.length > 30 ? '...' : ''}</span>
+                              <span>{subArea.description?.substring(0, 30) || ''}{subArea.description?.length > 30 ? '...' : ''}</span>
                             </Tooltip>
                           </TableCell>
-                           <TableCell>
-              {subArea.images?.length > 0 ? (
-                <img 
-                  src={subArea.images[0]} 
-                  alt={`Sub-area ${index}`} 
-                  style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }}
-                />
-              ) : (
-                <Typography variant="body2" color="text.secondary">No image</Typography>
-              )}
-            </TableCell>
+                          <TableCell>
+                            {subArea.images?.length > 0 ? (
+                              <img 
+                                src={getImageUrl(subArea.images[0])} 
+                                alt={`Sub-area ${index}`} 
+                                style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }}
+                              />
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">No image</Typography>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              {subArea.highlights.safetyRating}/10
+                              {subArea.highlights?.safetyRating || 0}/10
                               <StarIcon color="warning" sx={{ ml: 0.5, fontSize: '1rem' }} />
                             </Box>
                           </TableCell>
                           <TableCell>
-                            {subArea.highlights.greenZones ? (
+                            {subArea.highlights?.greenZones ? (
                               <Chip label="Yes" color="success" size="small" />
                             ) : (
                               <Chip label="No" color="default" size="small" />
@@ -674,7 +995,11 @@ const AreasAdminPanel = () => {
                   <ImageList cols={3} rowHeight={164} sx={{ mt: 2 }}>
                     {formData.images.map((img, index) => (
                       <ImageListItem key={index}>
-                        <img src={img} alt={`Preview ${index}`} />
+                        <img 
+                          src={getImageUrl(img)} 
+                          alt={`Preview ${index}`} 
+                          loading="lazy"
+                        />
                         <ImageListItemBar
                           actionIcon={
                             <IconButton
@@ -721,7 +1046,7 @@ const AreasAdminPanel = () => {
                   value={formData.highlights.totalPopulation}
                   onChange={(e) => setFormData({
                     ...formData, 
-                    highlights: {...formData.highlights, totalPopulation: parseInt(e.target.value)}
+                    highlights: {...formData.highlights, totalPopulation: parseInt(e.target.value) || 0}
                   })}
                   margin="dense"
                 />
@@ -734,7 +1059,7 @@ const AreasAdminPanel = () => {
                   value={formData.highlights.averagePricePerSqft}
                   onChange={(e) => setFormData({
                     ...formData, 
-                    highlights: {...formData.highlights, averagePricePerSqft: parseInt(e.target.value)}
+                    highlights: {...formData.highlights, averagePricePerSqft: parseInt(e.target.value) || 0}
                   })}
                   margin="dense"
                 />
@@ -753,14 +1078,13 @@ const AreasAdminPanel = () => {
                   label="Has Metro Connectivity"
                 />
               </Grid>
-              <Grid item xs={12} sx={{width: 200}}>
+              <Grid item xs={12}>
                 <Autocomplete
                   multiple
                   freeSolo
                   options={commonAttractions}
                   value={formData.highlights.majorAttractions || []}
                   onChange={(event, newValue) => {
-                    // Filter out empty strings
                     const filteredValue = newValue.filter(item => item.trim() !== '');
                     setFormData({
                       ...formData, 
@@ -828,6 +1152,7 @@ const AreasAdminPanel = () => {
                           <TableRow>
                             <TableCell>Name</TableCell>
                             <TableCell>Description</TableCell>
+                            <TableCell>Image</TableCell>
                             <TableCell>Safety</TableCell>
                             <TableCell>Green Zones</TableCell>
                             <TableCell>Actions</TableCell>
@@ -839,17 +1164,28 @@ const AreasAdminPanel = () => {
                               <TableCell>{subArea.name}</TableCell>
                               <TableCell>
                                 <Tooltip title={subArea.description}>
-                                  <span>{subArea.description.substring(0, 30)}{subArea.description.length > 30 ? '...' : ''}</span>
+                                  <span>{subArea.description?.substring(0, 30) || ''}{subArea.description?.length > 30 ? '...' : ''}</span>
                                 </Tooltip>
                               </TableCell>
                               <TableCell>
+                                {subArea.images?.length > 0 ? (
+                                  <img 
+                                    src={getImageUrl(subArea.images[0])} 
+                                    alt={`Sub-area ${index}`} 
+                                    style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }}
+                                  />
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">No image</Typography>
+                                )}
+                              </TableCell>
+                              <TableCell>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  {subArea.highlights.safetyRating}/10
+                                  {subArea.highlights?.safetyRating || 0}/10
                                   <StarIcon color="warning" sx={{ ml: 0.5, fontSize: '1rem' }} />
                                 </Box>
                               </TableCell>
                               <TableCell>
-                                {subArea.highlights.greenZones ? (
+                                {subArea.highlights?.greenZones ? (
                                   <Chip label="Yes" color="success" size="small" />
                                 ) : (
                                   <Chip label="No" color="default" size="small" />
@@ -860,7 +1196,17 @@ const AreasAdminPanel = () => {
                                   size="small"
                                   onClick={() => {
                                     setCurrentSubArea(subArea);
-                                    setSubAreaFormData(JSON.parse(JSON.stringify(subArea)));
+                                    setSubAreaFormData({
+                                      name: subArea.name || '',
+                                      description: subArea.description || '',
+                                      images: subArea.images || [],
+                                      highlights: {
+                                        roads: subArea.highlights?.roads || '',
+                                        metroAccess: subArea.highlights?.metroAccess || '',
+                                        safetyRating: subArea.highlights?.safetyRating || 5,
+                                        greenZones: subArea.highlights?.greenZones || false
+                                      }
+                                    });
                                     setSubAreaDialogOpen(true);
                                   }}
                                 >
@@ -924,14 +1270,7 @@ const AreasAdminPanel = () => {
                 id="subarea-images-upload"
                 type="file"
                 multiple
-                onChange={(e) => {
-                  const files = Array.from(e.target.files);
-                  const newImages = files.map(file => URL.createObjectURL(file));
-                  setSubAreaFormData(prev => ({
-                    ...prev,
-                    images: [...prev.images, ...newImages]
-                  }));
-                }}
+                onChange={handleSubAreaImageUpload}
               />
               <label htmlFor="subarea-images-upload">
                 <Button variant="contained" component="span" startIcon={<AddIcon />}>
@@ -943,19 +1282,16 @@ const AreasAdminPanel = () => {
                 <ImageList cols={3} rowHeight={164} sx={{ mt: 2 }}>
                   {subAreaFormData.images.map((img, index) => (
                     <ImageListItem key={index}>
-                      <img src={img} alt={`Sub-area preview ${index}`} />
+                      <img 
+                        src={getImageUrl(img)} 
+                        alt={`Sub-area preview ${index}`} 
+                        loading="lazy"
+                      />
                       <ImageListItemBar
                         actionIcon={
                           <IconButton
                             color="error"
-                            onClick={() => {
-                              const newImages = [...subAreaFormData.images];
-                              newImages.splice(index, 1);
-                              setSubAreaFormData(prev => ({
-                                ...prev,
-                                images: newImages
-                              }));
-                            }}
+                            onClick={() => handleRemoveSubAreaImage(index)}
                           >
                             <DeleteIcon />
                           </IconButton>

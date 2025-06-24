@@ -8,7 +8,10 @@ const serviceSchema = new mongoose.Schema({
   description: String,
   features: [String],
   price: Number,
-  image: String,
+  image: {
+    url: String,
+    public_id: String
+  },
   createdAt: {
     type: Date,
     default: Date.now,

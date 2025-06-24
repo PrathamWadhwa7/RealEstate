@@ -43,7 +43,9 @@ import {
   Bed as BedIcon,
   Bathtub as BathtubIcon,
   AspectRatio as AreaIcon,
-  FilterList as FilterIcon
+  FilterList as FilterIcon,
+  CloudUpload as CloudUploadIcon,
+  DeleteForever as DeleteForeverIcon
 } from '@mui/icons-material';
 import axiosInstance from '../api/axiosInstance';
 
@@ -61,8 +63,9 @@ const PropertiesAdminPanel = () => {
     type: '',
     locality: ''
   });
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [imagePreviews, setImagePreviews] = useState([]);
 
-  // Form state with complete defaults
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -87,7 +90,6 @@ const PropertiesAdminPanel = () => {
   const types = ['Rent', 'Buy'];
   const features = ['Balcony', 'Modular Kitchen', 'Covered Parking', 'Swimming Pool', 'Gym', 'Garden', 'Security', 'Elevator'];
 
-  // Fetch properties with validation
   const fetchProperties = async () => {
     setLoading(true);
     try {
@@ -124,33 +126,216 @@ const PropertiesAdminPanel = () => {
     fetchProperties();
   }, []);
 
-  // API functions with proper error handling
+  // const handleImageUpload = async (e, propertyId = null) => {
+  //   const files = e.target.files;
+  //   if (!files || files.length === 0) return;
+
+  //   setUploadingImages(true);
+    
+  //   try {
+  //     const uploadData = new FormData();
+  //     Array.from(files).forEach(file => {
+  //       uploadData.append('images', file);
+  //     });
+
+  //     if (propertyId) {
+  //       // Update existing property
+  //       const response = await axiosInstance.put(
+  //         `/properties/${propertyId}`,
+  //         uploadData,
+  //         {
+  //           headers: {
+  //             'Content-Type': 'multipart/form-data'
+  //           }
+  //         }
+  //       );
+        
+  //       setFormData(prev => ({
+  //         ...prev,
+  //         images: response.data.images
+  //       }));
+        
+  //       showSnackbar('Images updated successfully!', 'success');
+  //     } else {
+  //       // Upload images for new property
+  //       const uploadResponse = await axiosInstance.post(
+  //         '/properties/upload',
+  //         uploadData,
+  //         {
+  //           headers: {
+  //             'Content-Type': 'multipart/form-data'
+  //           }
+  //         }
+  //       );
+        
+  //       setFormData(prev => ({
+  //         ...prev,
+  //         images: uploadResponse.data.images
+  //       }));
+        
+  //       showSnackbar('Images uploaded successfully!', 'success');
+  //     }
+  //   } catch (error) {
+  //     console.error('Upload error:', error);
+  //     showSnackbar(
+  //       error.response?.data?.message || 
+  //       'Failed to upload images', 
+  //       'error'
+  //     );
+  //   } finally {
+  //     setUploadingImages(false);
+  //   }
+  // };
+  const handleImageUpload = async (e, propertyId = null) => {
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+
+  // Check if adding new images would exceed the limit
+  const currentImageCount = formData.images?.length || 0;
+  const newImageCount = files.length;
+  const totalImages = currentImageCount + newImageCount;
+
+  if (totalImages > 10) {
+    showSnackbar(`Cannot upload ${newImageCount} images. Maximum 10 images allowed. You currently have ${currentImageCount} images.`, 'error');
+    return;
+  }
+
+  setUploadingImages(true);
+  
+  try {
+    const uploadData = new FormData();
+    Array.from(files).forEach(file => {
+      uploadData.append('images', file);
+    });
+
+    if (propertyId) {
+      // For existing property, first upload images to get URLs
+      const uploadResponse = await axiosInstance.post(
+        '/properties/upload', // Use the general upload endpoint first
+        uploadData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      // Then update the property with merged images
+      const mergedImages = [...(formData.images || []), ...uploadResponse.data.images];
+      
+      const updateResponse = await axiosInstance.put(
+        `/properties/${propertyId}`,
+        {
+          ...formData,
+          images: mergedImages
+        }
+      );
+      
+      setFormData(prev => ({
+        ...prev,
+        images: mergedImages
+      }));
+      
+      // Update the properties list
+      setProperties(prev => prev.map(prop => 
+        prop._id === propertyId 
+          ? { ...prop, images: mergedImages }
+          : prop
+      ));
+      
+      setFilteredProperties(prev => prev.map(prop => 
+        prop._id === propertyId 
+          ? { ...prop, images: mergedImages }
+          : prop
+      ));
+      
+      showSnackbar(`${files.length} image(s) uploaded successfully!`, 'success');
+    } else {
+      // Upload images for new property
+      const uploadResponse = await axiosInstance.post(
+        '/properties/upload',
+        uploadData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      // For new properties, merge with existing images in form
+      const updatedImages = [...(formData.images || []), ...uploadResponse.data.images];
+      
+      setFormData(prev => ({
+        ...prev,
+        images: updatedImages
+      }));
+      
+      showSnackbar(`${files.length} image(s) uploaded successfully!`, 'success');
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    showSnackbar(
+      error.response?.data?.message || 
+      'Failed to upload images', 
+      'error'
+    );
+  } finally {
+    setUploadingImages(false);
+    // Clear the input value to allow uploading the same files again
+    e.target.value = '';
+  }
+};
+
+  const handleDeleteImage = async (propertyId, fullPublicId) => {
+    try {
+      const imageId = fullPublicId.split('/').pop();
+      await axiosInstance.delete(`/properties/${propertyId}/images/${imageId}`);
+      
+      // Update properties list
+      const updatedProperties = properties.map(prop => {
+        if (prop._id === propertyId) {
+          return {
+            ...prop,
+            images: prop.images.filter(img => !img.public_id.endsWith(imageId))
+          };
+        }
+        return prop;
+      });
+      
+      setProperties(updatedProperties);
+      setFilteredProperties(updatedProperties);
+      
+      // Update form if editing this property
+      if (editingProperty && editingProperty._id === propertyId) {
+        setFormData(prev => ({
+          ...prev,
+          images: prev.images.filter(img => !img.public_id.endsWith(imageId))
+        }));
+      }
+      
+      showSnackbar('Image deleted successfully!', 'success');
+    } catch (error) {
+      console.error('Image deletion error:', error);
+      showSnackbar(
+        error.response?.data?.message || 
+        'Error deleting image', 
+        'error'
+      );
+    }
+  };
+   const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this property?')) {
+      await deleteProperty(id);
+    }
+  };
   const createProperty = async (propertyData) => {
     try {
-      // Optimistic update with temporary ID
-      const tempId = `temp-${Date.now()}`;
-      const optimisticProperty = {
-        ...propertyData,
-        _id: tempId,
-        isOptimistic: true
-      };
-      
-      setProperties(prev => [...prev, optimisticProperty]);
-      setFilteredProperties(prev => [...prev, optimisticProperty]);
-
       const response = await axiosInstance.post('/properties', propertyData);
-      
-      // Replace optimistic update with real data
-      setProperties(prev => prev.map(p => p._id === tempId ? response.data : p));
-      setFilteredProperties(prev => prev.map(p => p._id === tempId ? response.data : p));
-      
+      setProperties(prev => [...prev, response.data]);
+      setFilteredProperties(prev => [...prev, response.data]);
       showSnackbar('Property created successfully!', 'success');
       return response.data;
     } catch (error) {
-      // Rollback on error
-      setProperties(prev => prev.filter(p => p._id !== tempId));
-      setFilteredProperties(prev => prev.filter(p => p._id !== tempId));
-      
       console.error('Creation error:', error);
       showSnackbar(error.response?.data?.message || 'Error creating property', 'error');
       throw error;
@@ -181,7 +366,6 @@ const PropertiesAdminPanel = () => {
     }
   };
 
-  // Helper functions
   const showSnackbar = (message, severity) => {
     setSnackbar({ open: true, message, severity });
   };
@@ -192,28 +376,39 @@ const PropertiesAdminPanel = () => {
 
   const handleOpenDialog = (property = null) => {
     setEditingProperty(property);
-    setFormData(property || {
-      title: '',
-      description: '',
-      category: 'Residential',
-      type: 'Rent',
-      highlights: {
-        locality: '',
-        subLocality: '',
-        bedrooms: 1,
-        bathrooms: 1,
-        area: '',
-        otherFeatures: []
-      },
-      price: { amount: 0, currency: 'INR' },
-      images: []
-    });
+    setFormData(property
+      ? { 
+          ...property,
+          highlights: {
+            ...property.highlights,
+            otherFeatures: property.highlights?.otherFeatures || []
+          }
+        }
+      : {
+          title: '',
+          description: '',
+          category: 'Residential',
+          type: 'Rent',
+          highlights: {
+            locality: '',
+            subLocality: '',
+            bedrooms: 1,
+            bathrooms: 1,
+            area: '',
+            otherFeatures: []
+          },
+          price: { amount: 0, currency: 'INR' },
+          images: []
+        }
+    );
+    setImagePreviews(property?.images?.map(img => img.url) || []);
     setOpenDialog(true);
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingProperty(null);
+    setImagePreviews([]);
   };
 
   const handleSubmit = async () => {
@@ -221,17 +416,21 @@ const PropertiesAdminPanel = () => {
       if (editingProperty) {
         await updateProperty(editingProperty._id, formData);
       } else {
-        await createProperty(formData);
+        // For new properties, make sure to include all required fields
+        const propertyData = {
+          ...formData,
+          postedBy: "admin-user-id" // Replace with actual user ID from auth
+        };
+        await createProperty(propertyData);
       }
       handleCloseDialog();
     } catch (error) {
       console.error('Submission error:', error);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this property?')) {
-      await deleteProperty(id);
+      showSnackbar(
+        error.response?.data?.message || 
+        'Error submitting property', 
+        'error'
+      );
     }
   };
 
@@ -397,6 +596,7 @@ const PropertiesAdminPanel = () => {
             <TableHead sx={{ backgroundColor: '#f8f9fa' }}>
               <TableRow>
                 <TableCell><strong>Property</strong></TableCell>
+                <TableCell><strong>Images</strong></TableCell>
                 <TableCell><strong>Category</strong></TableCell>
                 <TableCell><strong>Type</strong></TableCell>
                 <TableCell><strong>Location</strong></TableCell>
@@ -408,13 +608,13 @@ const PropertiesAdminPanel = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={8} align="center">
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
               ) : filteredProperties.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={8} align="center">
                     No properties found
                   </TableCell>
                 </TableRow>
@@ -431,6 +631,26 @@ const PropertiesAdminPanel = () => {
                           <Typography variant="body2" color="text.secondary">
                             {property.description ? `${property.description.substring(0, 50)}...` : 'No description'}
                           </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          {property.images.slice(0, 3).map((img, idx) => (
+                            <Avatar 
+                              key={idx} 
+                              src={img.url} 
+                              variant="rounded"
+                              sx={{ width: 56, height: 56 }}
+                            />
+                          ))}
+                          {property.images.length > 3 && (
+                            <Avatar 
+                              variant="rounded"
+                              sx={{ width: 56, height: 56, bgcolor: 'primary.main', color: 'white' }}
+                            >
+                              +{property.images.length - 3}
+                            </Avatar>
+                          )}
                         </Box>
                       </TableCell>
                       <TableCell>
@@ -693,7 +913,7 @@ const PropertiesAdminPanel = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sx={{width: 200}}>
+            <Grid item xs={12} sx={{width: 600}}>
               <Autocomplete
                 multiple
                 options={features}
@@ -722,6 +942,63 @@ const PropertiesAdminPanel = () => {
                 )}
               />
             </Grid>
+            
+            {/* Image Upload Section */}
+            {editingProperty && (<Grid item xs={12}>
+              <Typography variant="subtitle1" sx={{ mt: 1, mb: 1 }}>
+                Property Images
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                {/* Image Previews */}
+                {formData.images.map((img, index) => (
+                  <Box key={index} sx={{ position: 'relative' }}>
+                    <Avatar 
+                      src={img.url} 
+                      variant="rounded"
+                      sx={{ width: 100, height: 100 }}
+                    />
+                    <IconButton
+                      size="small"
+                      sx={{ 
+                        position: 'absolute', 
+                        top: 0, 
+                        right: 0,
+                        backgroundColor: 'rgba(255,0,0,0.7)',
+                        '&:hover': { backgroundColor: 'rgba(255,0,0,0.9)' }
+                      }}
+                      onClick={() => handleDeleteImage(formData._id, img.public_id)}
+                    >
+                      <DeleteForeverIcon sx={{ color: 'white', fontSize: 16 }} />
+                    </IconButton>
+                  </Box>
+                ))}
+                
+                {/* Upload Button */}
+                <Box>
+                  <input
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    id="property-images-upload"
+                    type="file"
+                    multiple
+                    onChange={(e) => handleImageUpload(e, formData._id)}
+                  />
+                  <label htmlFor="property-images-upload">
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      startIcon={<CloudUploadIcon />}
+                      disabled={uploadingImages}
+                    >
+                      {uploadingImages ? 'Uploading...' : 'Upload Images'}
+                    </Button>
+                  </label>
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    Upload up to 10 images (max 5MB each)
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>)}
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>

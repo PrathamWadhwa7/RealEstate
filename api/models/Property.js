@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+
 const propertySchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: String,
@@ -17,13 +18,15 @@ const propertySchema = new mongoose.Schema({
     amount: Number,
     currency: { type: String, default: "INR" }
   },
-  images: [String],
+  images: [{
+    url: String,
+    public_id: String
+  }],
   postedAt: { type: Date, default: Date.now },
   postedBy: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "User"  // This should match your User model name
-}
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  }
 });
 
-// module.exports = mongoose.model("Property", propertySchema);
 module.exports = mongoose.models.Property || mongoose.model("Property", propertySchema);

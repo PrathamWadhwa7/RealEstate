@@ -1,10 +1,14 @@
-// models/Area.js
 const mongoose = require("mongoose");
+
+const imageSchema = new mongoose.Schema({
+  url: String,
+  public_id: String
+}, { _id: false });
 
 const subAreaSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
-  images: [String],
+  images: [imageSchema],
   highlights: {
     roads: String,
     metroAccess: String,
@@ -16,7 +20,7 @@ const subAreaSchema = new mongoose.Schema({
 const areaSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
-  images: [String],
+  images: [imageSchema],
   highlights: {
     totalPopulation: Number,
     averagePricePerSqft: Number,
@@ -27,4 +31,3 @@ const areaSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model("Area", areaSchema);
-

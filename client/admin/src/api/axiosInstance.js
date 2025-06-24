@@ -1,13 +1,26 @@
+// import axios from "axios";
+
+// const instance = axios.create({
+//   baseURL: "http://localhost:5000/api", // Change as needed
+// });
+
+// instance.interceptors.request.use((config) => {
+//   const token = localStorage.getItem("token");
+//   if (token) config.headers.Authorization = `${token}`;
+//   return config;
+// });
 import axios from "axios";
 
-const instance = axios.create({
-  baseURL: "http://localhost:5000/api", // Change as needed
+const axiosInstance = axios.create({
+  baseURL: "http://localhost:5000/api", // match your backend
 });
 
-instance.interceptors.request.use((config) => {
+axiosInstance.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `${token}`;
-  return config;
+  if (token) {
+    req.headers.Authorization = token; // no Bearer
+  }
+  return req;
 });
 
-export default instance;
+export default axiosInstance;
