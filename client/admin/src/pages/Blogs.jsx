@@ -66,14 +66,14 @@ const BlogsAdminPanel = () => {
     author: '',
     dateRange: ''
   });
-  const [imageUploads, setImageUploads] = useState([]);
+  const [imageFile, setImageFile] = useState(null);
 
   const [formData, setFormData] = useState({
     title: '',
     content: '',
     author: '',
-    publishedAt: new Date().toISOString(),
-    images: []
+    meta: { keywords: [] },
+    image: null
   });
 
   useEffect(() => {
@@ -94,7 +94,20 @@ const BlogsAdminPanel = () => {
 
   const createBlog = async (blogData) => {
     try {
-      const response = await axiosInstance.post('/blogs/', blogData);
+      const formData = new FormData();
+      formData.append('title', blogData.title);
+      formData.append('content', blogData.content);
+      formData.append('author', blogData.author);
+      formData.append('meta', JSON.stringify(blogData.meta));
+      if (blogData.imageFile) {
+        formData.append('image', blogData.imageFile);
+      }
+
+      const response = await axiosInstance.post('/blogs/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       const newBlog = response.data;
       setBlogs(prev => [...prev, newBlog]);
       setFilteredBlogs(prev => [...prev, newBlog]);
@@ -106,7 +119,22 @@ const BlogsAdminPanel = () => {
 
   const updateBlog = async (id, blogData) => {
     try {
-      const response = await axiosInstance.put(`/blogs/${id}`, blogData);
+      const formData = new FormData();
+      formData.append('title', blogData.title);
+      formData.append('content', blogData.content);
+      formData.append('author', blogData.author);
+      formData.append('meta', JSON.stringify(blogData.meta));
+      if (blogData.imageFile) {
+        formData.append('image', blogData.imageFile);
+      }
+      // Add flag to remove image if no new image is selected and existing image is removed
+      formData.append('removeImage', blogData.removeImage);
+
+      const response = await axiosInstance.put(`/blogs/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       const updatedBlog = response.data;
       setBlogs(prev => prev.map(b => b._id === id ? updatedBlog : b));
       setFilteredBlogs(prev => prev.map(b => b._id === id ? updatedBlog : b));
@@ -132,7 +160,7 @@ const BlogsAdminPanel = () => {
     if (error.response?.status === 401) {
       showSnackbar('Session expired. Please login again.', 'error');
     } else {
-      showSnackbar(`Error ${action}: ${error.response?.data?.message || error.message}`, 'error');
+      showSnackbar(`Error ${action}: ${error.response?.data?.error || error.message}`, 'error');
     }
   };
 
@@ -146,11 +174,16 @@ const BlogsAdminPanel = () => {
 
   const handleOpenDialog = (blog = null, viewOnly = false) => {
     setViewMode(viewOnly);
+    setImageFile(null);
+    
     if (blog) {
       setEditingBlog(blog);
       setFormData({
-        ...blog,
-        publishedAt: blog.publishedAt || new Date().toISOString()
+        title: blog.title,
+        content: blog.content,
+        author: blog.author,
+        meta: blog.meta || { keywords: [] },
+        image: blog.image
       });
     } else {
       setEditingBlog(null);
@@ -158,8 +191,8 @@ const BlogsAdminPanel = () => {
         title: '',
         content: '',
         author: '',
-        publishedAt: new Date().toISOString(),
-        images: []
+        meta: { keywords: [] },
+        image: null
       });
     }
     setOpenDialog(true);
@@ -169,12 +202,25 @@ const BlogsAdminPanel = () => {
     setOpenDialog(false);
     setEditingBlog(null);
     setViewMode(false);
+    setImageFile(null);
+  };
+
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setImageFile(e.target.files[0]);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFormData(prev => ({ ...prev, image: null }));
+    setImageFile(null);
   };
 
   const handleSubmit = async () => {
     const blogData = {
       ...formData,
-      publishedAt: formData.publishedAt || new Date().toISOString()
+      imageFile,
+      removeImage: !imageFile && !formData.image // Remove image only if no new image is selected and existing image is cleared
     };
 
     if (editingBlog) {
@@ -214,7 +260,7 @@ const BlogsAdminPanel = () => {
       }
       
       filtered = filtered.filter(b => {
-        const blogDate = new Date(b.publishedAt);
+        const blogDate = new Date(b.createdAt);
         return blogDate >= startDate;
       });
     }
@@ -223,33 +269,15 @@ const BlogsAdminPanel = () => {
     setPage(0);
   };
 
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const newImages = files.map(file => URL.createObjectURL(file));
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, ...newImages]
-    }));
-  };
-
-  const handleRemoveImage = (index) => {
-    const newImages = [...formData.images];
-    newImages.splice(index, 1);
-    setFormData(prev => ({
-      ...prev,
-      images: newImages
-    }));
-  };
-
   const formatDate = (dateString) => {
-  if (!dateString) return "N/A"; // Fallback if date is missing
-  try {
-    return format(parseISO(dateString), "MMM dd, yyyy");
-  } catch (err) {
-    console.error("Date formatting error:", err);
-    return "Invalid date";
-  }
-};
+    if (!dateString) return "N/A";
+    try {
+      return format(parseISO(dateString), "MMM dd, yyyy");
+    } catch (err) {
+      console.error("Date formatting error:", err);
+      return "Invalid date";
+    }
+  };
 
   return (
     <Box sx={{ p: 0, width: '100vw', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
@@ -315,7 +343,7 @@ const BlogsAdminPanel = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography variant="h4">
-                    {blogs.filter(b => new Date(b.publishedAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length}
+                    {blogs.filter(b => new Date(b.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length}
                   </Typography>
                   <Typography variant="body2">Last 30 Days</Typography>
                 </Box>
@@ -331,8 +359,8 @@ const BlogsAdminPanel = () => {
                 <Box>
                   <Typography variant="h4">
                     {formatDate(blogs.reduce((latest, blog) => 
-                      new Date(blog.createdAt) > new Date(latest.publishedAt) ? blog : latest
-                    , {publishedAt: 0}).createdAt)}
+                      new Date(blog.createdAt) > new Date(latest.createdAt) ? blog : latest
+                    , {createdAt: 0}).createdAt)}
                   </Typography>
                   <Typography variant="body2">Most Recent</Typography>
                 </Box>
@@ -473,62 +501,88 @@ const BlogsAdminPanel = () => {
               <Typography variant="h4" gutterBottom>{formData.title}</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                 <Chip label={formData.author} icon={<AuthorIcon />} />
-                <Chip label={formatDate(formData.createdAt)} icon={<CalendarIcon />} />
+                <Chip label={formatDate(editingBlog?.createdAt)} icon={<CalendarIcon />} />
               </Box>
               
+              {formData.image?.url && (
+                <Box sx={{ mb: 3 }}>
+                  <img 
+                    src={formData.image.url} 
+                    alt="Blog cover" 
+                    style={{ 
+                      width: '100%', 
+                      maxHeight: '400px', 
+                      objectFit: 'cover',
+                      borderRadius: '4px'
+                    }} 
+                  />
+                </Box>
+              )}
+
               <Typography variant="body1" paragraph sx={{ whiteSpace: 'pre-line' }}>
                 {formData.content}
               </Typography>
-
-              {formData.images.length > 0 && (
-                <>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Images</Typography>
-                  <ImageList cols={3} rowHeight={164}>
-                    {formData.images.map((img, index) => (
-                      <ImageListItem key={index}>
-                        <img src={img} alt={`Blog ${index}`} />
-                      </ImageListItem>
-                    ))}
-                  </ImageList>
-                </>
-              )}
             </Box>
           ) : (
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                <Typography variant="subtitle1">Images</Typography>
+                <Typography variant="subtitle1" gutterBottom>Featured Image</Typography>
+                
+                {formData.image?.url && (
+                  <Box sx={{ mb: 2 }}>
+                    <img 
+                      src={formData.image.url} 
+                      alt="Current blog cover" 
+                      style={{ 
+                        width: '100%', 
+                        maxHeight: '300px', 
+                        objectFit: 'cover',
+                        borderRadius: '4px'
+                      }} 
+                    />
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={handleRemoveImage}
+                      sx={{ mt: 1 }}
+                    >
+                      Remove Image
+                    </Button>
+                  </Box>
+                )}
+                
                 <input
                   accept="image/*"
                   style={{ display: 'none' }}
-                  id="blog-images-upload"
+                  id="blog-image-upload"
                   type="file"
-                  multiple
-                  onChange={handleImageUpload}
+                  onChange={handleImageChange}
                 />
-                <label htmlFor="blog-images-upload">
-                  <Button variant="contained" component="span" startIcon={<AddIcon />}>
-                    Upload Images
+                <label htmlFor="blog-image-upload">
+                  <Button 
+                    variant="contained" 
+                    component="span" 
+                    startIcon={<AddIcon />} 
+                    sx={{ mt: 1 }}
+                  >
+                    {formData.image?.url ? 'Change Image' : 'Upload Image'}
                   </Button>
                 </label>
                 
-                {formData.images.length > 0 && (
-                  <ImageList cols={3} rowHeight={164} sx={{ mt: 2 }}>
-                    {formData.images.map((img, index) => (
-                      <ImageListItem key={index}>
-                        <img src={img} alt={`Preview ${index}`} />
-                        <ImageListItemBar
-                          actionIcon={
-                            <IconButton
-                              color="error"
-                              onClick={() => handleRemoveImage(index)}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          }
-                        />
-                      </ImageListItem>
-                    ))}
-                  </ImageList>
+                {imageFile && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2">New Image Preview:</Typography>
+                    <img 
+                      src={URL.createObjectURL(imageFile)} 
+                      alt="Preview" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '200px', 
+                        marginTop: '8px' 
+                      }} 
+                    />
+                  </Box>
                 )}
               </Grid>
               
@@ -550,20 +604,6 @@ const BlogsAdminPanel = () => {
                   onChange={(e) => setFormData({...formData, author: e.target.value})}
                   margin="dense"
                   required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="datetime-local"
-                  label="Publish Date & Time"
-                  value={formData.publishedAt ? formData.publishedAt.substring(0, 16) : ''}
-                  onChange={(e) => setFormData({
-                    ...formData, 
-                    publishedAt: e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
-                  })}
-                  margin="dense"
-                  InputLabelProps={{ shrink: true }}
                 />
               </Grid>
               <Grid item xs={12}>

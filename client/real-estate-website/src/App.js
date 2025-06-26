@@ -3,10 +3,12 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import PropertyDetails from './pages/PropertyDetails';
-import NotFound from './pages/NotFound';  // This should now work
+import NotFound from './pages/NotFound'; 
 import './App.css';
-
 import MapTestPage from './pages/MapTestPage';
+import ServicesPage from './pages/Service'
+import BlogPage from './pages/blogs';
+import ContactUsPage from './pages/contact';
 
 // Add this to your Routes:
 function App() {
@@ -18,6 +20,9 @@ function App() {
           <Route path="/property/:id" element={<PropertyDetails />} />
           <Route path="*" element={<NotFound />} />
           <Route path="/map-test" element={<MapTestPage />} />
+          <Route path="/services" element={<ServicesPage/>}/>
+          <Route path="/Blogs" element={<BlogPage/>}/>
+          <Route path="/contact" element={<ContactUsPage/>}/>
         </Routes>
       </Router>
     </ErrorBoundary>

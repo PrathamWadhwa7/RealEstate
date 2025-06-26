@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import './search.css';
 const SearchBox = () => {
   const navigate = useNavigate();
   const [showAdvanced, setShowAdvanced] = useState(false);

@@ -49,7 +49,7 @@ const HomePage = () => {
       <Header />
       <HeroSection />
       <SearchBox />
-      <FeaturedListings properties={properties} />
+      <FeaturedListings  />
       <WhyInvest />
       <Localities localities={localities} />
       <TrustedPartners />

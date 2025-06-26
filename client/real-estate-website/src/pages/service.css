@@ -1,0 +1,145 @@
+/* Services Page Styles */
+.services-page {
+  padding: 60px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.services-page h1 {
+  text-align: center;
+  margin-bottom: 50px;
+  color: #333;
+  font-size: 2.5rem;
+}
+
+.service-item {
+  display: flex;
+  margin-bottom: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  background: #fff;
+}
+
+.service-image {
+  flex: 1;
+  min-height: 200px;
+}
+
+.service-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.service-content {
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.service-content h2 {
+  color: #4ddbff;
+  margin-bottom: 20px;
+  font-size: 1.8rem;
+}
+
+.service-content p {
+  color: #666;
+  margin-bottom: 25px;
+  line-height: 1.6;
+}
+
+.service-features {
+  margin-bottom: 30px;
+}
+
+.service-features h3 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.service-features ul {
+  list-style-type: none;
+}
+
+.service-features li {
+  position: relative;
+  padding-left: 25px;
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.service-features li:before {
+  content: "✓";
+  color: #4ddbff;
+  position: absolute;
+  left: 0;
+  font-weight: bold;
+}
+
+.service-price {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 25px;
+}
+
+.service-price span {
+  font-size: 1rem;
+  color: #666;
+  font-weight: normal;
+}
+
+.enquire-button {
+  background-color: #4ddbff;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  font-size: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background-color 0.3s;
+}
+
+.enquire-button:hover {
+  background-color: #3bc0e0;
+}
+
+/* Alternating layout */
+.service-item:nth-child(even) {
+  flex-direction: row-reverse;
+}
+
+/* Responsive styles */
+@media (max-width: 900px) {
+  .service-item {
+    flex-direction: column;
+  }
+  
+  .service-item:nth-child(even) {
+    flex-direction: column;
+  }
+  
+  .service-image {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 600px) {
+  .services-page h1 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+  }
+  
+  .service-content {
+    padding: 25px;
+  }
+  
+  .service-content h2 {
+    font-size: 1.5rem;
+  }
+}

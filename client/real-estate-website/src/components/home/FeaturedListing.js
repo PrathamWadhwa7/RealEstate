@@ -1,54 +1,8 @@
-// // src/components/home/FeaturedListings.js
-// import React from 'react';
-// import Slider from 'react-slick';
-// import 'slick-carousel/slick/slick.css';
-// import 'slick-carousel/slick/slick-theme.css';
-
-// const FeaturedListings = ({ properties }) => {
-//   const settings = {
-//     dots: true,
-//     infinite: true,
-//     speed: 500,
-//     slidesToShow: 2,
-//     slidesToScroll: 1,
-//     responsive: [
-//       {
-//         breakpoint: 768,
-//         settings: {
-//           slidesToShow: 1,
-//           slidesToScroll: 1
-//         }
-//       }
-//     ]
-//   };
-
-//   return (
-//     <section className="featured-listings">
-//       <h2>Featured Properties in Greater Noida & Yamuna Expressway (2025)</h2>
-      
-//       <Slider {...settings}>
-//         {properties.map(property => (
-//           <div key={property.id} className="property-card">
-//             <img src={property.image} alt={property.title} />
-//             <div className="property-details">
-//               <h3>₹{property.price.toLocaleString()}</h3>
-//               <p>{property.location}, {property.type}</p>
-//               <button className="view-details">View Details</button>
-//             </div>
-//           </div>
-//         ))}
-//       </Slider>
-//     </section>
-//   );
-// };
-
-// export default FeaturedListings;
-
-
 import React, { useState, useEffect } from 'react';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
+import './features.css';
 import axios from 'axios';
 
 const FeaturedListings = () => {
@@ -59,7 +13,7 @@ const FeaturedListings = () => {
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const response = await axios.get('http://localhost:5050/api/properties');
+        const response = await axios.get('http://localhost:5000/api/properties');
         setProperties(response.data);
         setLoading(false);
       } catch (err) {
@@ -75,8 +29,8 @@ const FeaturedListings = () => {
     dots: true,
     infinite: true,
     speed: 500,
-    slidesToShow: 3,
-    slidesToScroll: 1,
+    slidesToShow: 4,
+    slidesToScroll: 2,
     responsive: [
       {
         breakpoint: 1024,
@@ -111,7 +65,7 @@ const FeaturedListings = () => {
             <div key={property._id} className="property-card">
               {/* Placeholder image - replace with actual property image from API if available */}
               <img 
-                src={property.images?.[0] || 'https://via.placeholder.com/400x300?text=Property+Image'} 
+                src={property.images?.[0]?.url || 'https://via.placeholder.com/400x300?text=Property+Image'} 
                 alt={property.title} 
               />
               <div className="property-details">

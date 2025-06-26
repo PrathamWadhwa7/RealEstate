@@ -7,17 +7,10 @@ const blogSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: Date,
   shareableLink: String,
-  views: { type: Number, default: 0 },
-  comments: [
-    {
-      user: String,
-      comment: String,
-      date: { type: Date, default: Date.now }
-    }
-  ],
-  readDuration: String,
-  images: [String],
-  videos: [String],
+ image: {
+    url: String,
+    public_id: String
+  },
   meta: {
     keywords: [String],
     description: String
