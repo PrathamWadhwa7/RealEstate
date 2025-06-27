@@ -1,4 +1,37 @@
 
+.slick-prev, 
+.slick-next {
+  width: 40px;
+  height: 40px;
+  z-index: 1;
+}
+
+.slick-prev {
+  left: -15px;
+}
+
+.slick-next {
+  right: -15px;
+}
+
+.slick-prev:before, 
+.slick-next:before {
+  color: #125363;
+  font-size: 30px;
+  opacity: 1;
+}
+
+/* Ensure slider container has space for arrows */
+.slick-slider {
+  padding: 0 30px;
+  position: relative;
+}
+
+/* Arrow hover effects */
+.slick-prev:hover:before,
+.slick-next:hover:before {
+  color: #4ddbff;
+}
 .featured-listings {
   padding: 20px;
 }

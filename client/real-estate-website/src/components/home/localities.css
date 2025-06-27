@@ -1,13 +1,48 @@
+/* Arrow container styling */
+.slick-prev, 
+.slick-next {
+  width: 40px;
+  height: 40px;
+  z-index: 1;
+}
+
+.slick-prev {
+  left: -15px;
+}
+
+.slick-next {
+  right: -15px;
+}
+
+.slick-prev:before, 
+.slick-next:before {
+  color: #125363;
+  font-size: 30px;
+  opacity: 1;
+}
+
+/* Ensure slider container has space for arrows */
+.slick-slider {
+  padding: 0 30px;
+  position: relative;
+}
+
+/* Arrow hover effects */
+.slick-prev:hover:before,
+.slick-next:hover:before {
+  color: #4ddbff;
+}
 .featured-listing {
   padding: 50px 20px;
   background-color: #f9f9f9;
   text-align: center;
+  margin: auto;
 }
 
 .featured-listing h2 {
   font-size: 28px;
   color: #222;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
   font-weight: 600;
 }
 
@@ -66,13 +101,13 @@
 }
 
 .view-guide:hover {
-  background-color: #3bc0e0;
+  background-color: #072a33;
 }
 
 .view-all {
   margin-top: 30px;
   padding: 10px 20px;
-  background: #125363;
+  background: #3bc0e0;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -82,7 +117,7 @@
 }
 
 .view-all:hover {
-  background-color: #0d3d4a;
+  background-color: #3bc0e0;
 }
 
 .loading,
